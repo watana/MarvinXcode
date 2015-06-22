@@ -102,6 +102,8 @@ static MarvinPlugin *marvinPlugin;
                                                               action:@selector(moveToEOLAndInsertLFAction)
                                                        keyEquivalent:@""];
             menuItem.target = self;
+            menuItem.keyEquivalentModifierMask = NSShiftKeyMask;
+            menuItem.keyEquivalent = [NSString stringWithFormat:@"%c", NSNewlineCharacter];
             menuItem;
         })];
 
@@ -126,7 +128,6 @@ static MarvinPlugin *marvinPlugin;
                                                               action:@selector(selectNextWordAction)
                                                        keyEquivalent:@""];
             menuItem.target = self;
-            menuItem.keyEquivalentModifierMask = NSControlKeyMask;
             menuItem;
         })];
 
@@ -300,36 +301,18 @@ static MarvinPlugin *marvinPlugin;
 
 - (void)moveToEOLAndInsertLFAction {
     NSRange lineContentsRange = self.xcodeManager.lineContentsRange;
-    NSRange lineRange = [self.xcodeManager lineRange];
-
-    if (lineContentsRange.location == NSNotFound) {
-        lineContentsRange.location = self.xcodeManager.contents.length;
-        lineContentsRange.length = 0;
-
-        [self.xcodeManager replaceCharactersInRange:lineContentsRange
-                                         withString:@"\n"];
-        self.xcodeManager.selectedRange = NSMakeRange(lineContentsRange.location+1, 0);
-
-        return;
+    NSRange lineRange = self.xcodeManager.lineRange;
+    NSUInteger endOfLine = lineContentsRange.location + lineContentsRange.length;
+    NSString *whiteSpace = [[self.xcodeManager contents] substringWithRange:NSMakeRange(lineRange.location, lineContentsRange.location - lineRange.location)];
+    
+    unichar lastCharacterInLine = [[self.xcodeManager contents] characterAtIndex:endOfLine - 1];
+    if (lastCharacterInLine == ';') {
+        [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine + 1, 0) withString:[NSString stringWithFormat:@"%@\n", whiteSpace]];
+        [self.xcodeManager setSelectedRange:NSMakeRange(endOfLine + 1 + whiteSpace.length, 0)];
+    } else {
+        [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine, 0) withString:@";"];
+        [self.xcodeManager setSelectedRange:NSMakeRange(endOfLine + 1, 0)];
     }
-
-    unsigned long endOfLine = (unsigned long)lineContentsRange.location+(unsigned long)lineContentsRange.length;
-
-    NSString *spacing = [[self.xcodeManager contents] substringWithRange:NSMakeRange(lineRange.location, lineContentsRange.location - lineRange.location)];
-
-    unichar lastCharacterInLine = [[self.xcodeManager contents] characterAtIndex:lineContentsRange.location+lineContentsRange.length-1];
-    int ascii = lastCharacterInLine;
-
-    NSMutableString *additionalSpacing = [NSMutableString new];
-    if (ascii == 123) {
-        for (int x = 0; x < 0; x++) {
-            [additionalSpacing appendString:@" "];
-        }
-    }
-
-    [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine,0)
-                                     withString:[NSString stringWithFormat:@"\n%@%@", spacing, [additionalSpacing copy]]];
-    [self.xcodeManager setSelectedRange:NSMakeRange(endOfLine+1+spacing.length+additionalSpacing.length, 0)];
 }
 
 - (void)properSave {

@@ -178,47 +178,48 @@
 }
 
 - (NSRange)lineContentsRange {
-    NSRange selectedRange = [self selectedRange];
-
-    NSCharacterSet *newlineSet = [NSCharacterSet characterSetWithCharactersInString:@"\n"];
-    NSUInteger startOfLine = ([[self contents] rangeOfCharacterFromSet:newlineSet
-                                                               options:NSBackwardsSearch
-                                                                 range:NSMakeRange(0,selectedRange.location)].location);
-
+    NSRange lineRange = [self lineRange];
     NSCharacterSet *validSet = [NSCharacterSet characterSetWithCharactersInString:kMarvinValidLineRange];
 
-    if (startOfLine == NSNotFound) startOfLine = 0;
-
-    NSUInteger location = ([[self contents] rangeOfCharacterFromSet:validSet
-                                                            options:NSCaseInsensitiveSearch
-                                                              range:NSMakeRange(startOfLine,[self documentLength]-startOfLine)].location);
-
-    NSUInteger length = ([[self contents] rangeOfCharacterFromSet:newlineSet
-                                                          options:NSCaseInsensitiveSearch
-                                                            range:NSMakeRange(selectedRange.location+selectedRange.length,[self contents].length-(selectedRange.location+selectedRange.length))].location);
-
-    if (length-location < [self documentLength]) {
-        return NSMakeRange(location, length-location);
-    } else {
-        return NSMakeRange(selectedRange.location, 0);
+    NSUInteger locationLeft = [[self contents] rangeOfCharacterFromSet:validSet
+                                                               options:NSCaseInsensitiveSearch
+                                                                 range:NSMakeRange(lineRange.location, lineRange.length)].location;
+    
+    if (NSNotFound == locationLeft) {
+        locationLeft = lineRange.location + lineRange.length;
     }
+    
+    NSUInteger locationRight = lineRange.location + lineRange.length;
+    locationRight = [[self contents] rangeOfCharacterFromSet:validSet options:NSCaseInsensitiveSearch | NSBackwardsSearch
+                                                       range:NSMakeRange(locationLeft, locationRight - locationLeft)].location;
+    
+    if (NSNotFound == locationRight) {
+        locationRight = locationLeft;
+    } else {
+        locationRight++;
+    }
+    
+    return NSMakeRange(locationLeft, locationRight - locationLeft);
 }
 
 - (NSRange)lineRange {
     NSRange selectedRange = [self selectedRange];
-    NSCharacterSet *newlineSet = [NSCharacterSet characterSetWithCharactersInString:@"\n"];
-    NSUInteger location = ([[self contents] rangeOfCharacterFromSet:newlineSet
-                                                            options:NSBackwardsSearch
-                                                              range:NSMakeRange(0,selectedRange.location)].location);
+    NSUInteger locationLeft = [[self contents] rangeOfString:@"\n" options:NSBackwardsSearch range:NSMakeRange(0, selectedRange.location)].location;
+    
+    if (NSNotFound == locationLeft) {
+        locationLeft = 0;
+    } else {
+        locationLeft++;
+    }
+    
+    NSUInteger locationRight = [[self contents] rangeOfString:@"\n" options:NSLiteralSearch
+                                                        range:NSMakeRange(selectedRange.location + selectedRange.length,
+                                                                          [self contents].length - (selectedRange.location + selectedRange.length))].location;
+    if (NSNotFound == locationRight) {
+        locationRight = [self contents].length - 1;
+    }
 
-    NSUInteger length = ([[self contents] rangeOfCharacterFromSet:newlineSet
-                                                          options:NSCaseInsensitiveSearch
-                                                            range:NSMakeRange(selectedRange.location+selectedRange.length,[self contents].length-(selectedRange.location+selectedRange.length))].location);
-
-    location = (location == NSNotFound) ? 0 : location + 1;
-    length   = (location == 0) ? length+1   : (length+1) - location;
-
-    return NSMakeRange(location, length);
+    return NSMakeRange(locationLeft, locationRight - locationLeft);
 }
 
 - (NSString *)contentsOfRange:(NSRange)range {
