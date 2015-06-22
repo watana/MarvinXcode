@@ -195,8 +195,6 @@
     
     if (NSNotFound == locationRight) {
         locationRight = locationLeft;
-    } else {
-        locationRight++;
     }
     
     return NSMakeRange(locationLeft, locationRight - locationLeft);

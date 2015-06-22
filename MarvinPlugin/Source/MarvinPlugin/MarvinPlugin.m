@@ -304,13 +304,23 @@ static MarvinPlugin *marvinPlugin;
     NSRange lineRange = self.xcodeManager.lineRange;
     NSUInteger endOfLine = lineContentsRange.location + lineContentsRange.length;
     NSString *whiteSpace = [[self.xcodeManager contents] substringWithRange:NSMakeRange(lineRange.location, lineContentsRange.location - lineRange.location)];
+    unichar lastCharacterInLine = [[self.xcodeManager contents] characterAtIndex:endOfLine];
     
-    unichar lastCharacterInLine = [[self.xcodeManager contents] characterAtIndex:endOfLine - 1];
-    if (lastCharacterInLine == ';') {
-        [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine + 1, 0) withString:[NSString stringWithFormat:@"%@\n", whiteSpace]];
+    if (lastCharacterInLine != NSNewlineCharacter) {
+        endOfLine++;
+    }
+    
+    if (lastCharacterInLine == ';' || lastCharacterInLine == '}' || lastCharacterInLine == '{') {
+        if (lastCharacterInLine == '{') {
+            whiteSpace = [whiteSpace stringByAppendingString:@"    "];
+        }
+        
+        [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine, lineRange.location + lineRange.length - endOfLine + 1)
+                                         withString:[NSString stringWithFormat:@"\n%@\n", whiteSpace]];
         [self.xcodeManager setSelectedRange:NSMakeRange(endOfLine + 1 + whiteSpace.length, 0)];
     } else {
-        [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine, 0) withString:@";"];
+        [self.xcodeManager replaceCharactersInRange:NSMakeRange(endOfLine, lineRange.location + lineRange.length - endOfLine + 1)
+                                         withString:@";\n"];
         [self.xcodeManager setSelectedRange:NSMakeRange(endOfLine + 1, 0)];
     }
 }
